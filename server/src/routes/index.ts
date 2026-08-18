@@ -9,6 +9,8 @@ import { Router } from 'express';
 import { deckRoutes } from './deckRoutes.js';
 import { cardRoutes } from './cardRoutes.js';
 import { reviewRoutes } from './reviewRoutes.js';
+import { importExportRoutes } from './importExportRoutes.js';
+import { statsRoutes } from './statsRoutes.js';
 
 const router = Router();
 
@@ -19,8 +21,10 @@ router.use('/cards', cardRoutes);
 // Stage 3b：复习模块（路径前缀已在 reviewRoutes 内部声明）
 router.use('/', reviewRoutes);
 
-// Stage 3 后续：importExport / stats
-// router.use('/io', ioRoutes);
-// router.use('/stats', statsRoutes);
+// Stage 3c：导入导出模块（路径前缀已在 importExportRoutes 内部声明）
+router.use('/', importExportRoutes);
+
+// Stage 3c：统计模块（V1.0 只做 overview，calendar/timeline/deckStats 属于 M1）
+router.use('/stats', statsRoutes);
 
 export { router as apiRoutes };

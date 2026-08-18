@@ -278,3 +278,79 @@ export interface ReviewProgress {
   reviewedToday: number;
   accuracy: number; // 0-100
 }
+
+// ===== Stage 3c 新增：导入导出 + 统计概览类型（ARCH §10 / §6.2.7 / §6.2.11）=====
+
+/**
+ * 导出 JSON 顶层结构（ARCH §10.1）
+ * 顶层元数据用 camelCase，业务字段沿用 DB snake_case
+ * notes/templates 在 V1.0 为空数组占位（M1 实现后填充具体类型）
+ */
+export interface ExportPayload {
+  version: number; // 1
+  exportedAt: string; // ISO datetime
+  decks: ExportDeck[];
+  review_logs: ExportReviewLog[];
+  notes: unknown[]; // V1.0 占位，M1 替换为 Note 导出类型
+  templates: unknown[]; // V1.0 占位，M1 替换为 Template 导出类型
+}
+
+/** 导出中的牌组（ARCH §10.1） */
+export interface ExportDeck {
+  name: string;
+  description: string;
+  cards: ExportCard[];
+}
+
+/** 导出中的卡片（ARCH §10.1，tags 为数组，与 DB 的 JSON 字符串不同） */
+export interface ExportCard {
+  front: string;
+  back: string;
+  tags: string[]; // 导出时 JSON.parse(DB.tags) 转数组
+  ease_factor: number;
+  interval: number; // 分钟
+  repetitions: number;
+  next_review: string; // ISO datetime
+  last_reviewed: string | null; // ISO datetime 或 null（新建卡片未复习）
+}
+
+/** 导出中的复习记录（ARCH §10.1，通过 deck_name + card_front 反查归属） */
+export interface ExportReviewLog {
+  deck_name: string;
+  card_front: string;
+  result: ReviewResult;
+  reviewed_at: string; // ISO datetime
+}
+
+/** 导入返回摘要（ARCH §6.2.11） */
+export interface ImportSummary {
+  decksCreated: number;
+  decksMerged: number;
+  cardsInserted: number;
+  cardsSkipped: number;
+  notesInserted: number;
+  templatesInserted: number;
+}
+
+/** 导入 JSON 请求体（POST /api/import/json） */
+export interface ImportPayload {
+  version?: number;
+  decks?: unknown;
+  review_logs?: unknown;
+  notes?: unknown;
+  templates?: unknown;
+}
+
+/**
+ * 全局统计概览（GET /api/stats/overview 返回，DB §7.4 + CHARTER R11）
+ * - masteredCards 口径：repetitions >= 3 且 interval >= 30240 分钟（21 天，R11）
+ * - streakDays：review_logs 按日期分组，从今天倒推连续有记录的日期数
+ * - accuracy：总正确率 (good + easy) / total × 100
+ */
+export interface StatsOverview {
+  totalCards: number;
+  masteredCards: number;
+  dueToday: number;
+  streakDays: number;
+  accuracy: number; // 0-100
+}
