@@ -1,0 +1,60 @@
+/* 工具类（FRONTEND §7.2）
+   仅极少量高频工具类，避免类名膨胀
+*/
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.full-height {
+  height: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* 加载态 */
+.loading {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}
+
+/* 空态 */
+.empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 48px 24px;
+}
