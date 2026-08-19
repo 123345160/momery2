@@ -44,7 +44,10 @@ export const useReviewStore = defineStore('review', () => {
     return { done, total, percent };
   });
 
-  const isSessionEnd = computed(() => currentIndex.value >= queue.value.length);
+  /** 会话是否结束（空队列视为未开始，而非已结束——空集语义兜底） */
+  const isSessionEnd = computed(
+    () => queue.value.length > 0 && currentIndex.value >= queue.value.length
+  );
 
   // ===== actions =====
   async function fetchDueCards(deckId: number): Promise<void> {
