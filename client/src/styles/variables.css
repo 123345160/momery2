@@ -21,6 +21,10 @@
   --border-color: #e8e8e8;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+
+  /* 遮罩 */
+  --overlay-bg: rgba(0, 0, 0, 0.45);
 
   /* 圆角 */
   --radius-sm: 4px;

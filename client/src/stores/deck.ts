@@ -1,8 +1,9 @@
 /**
  * useDeckStore — 牌组业务域（FRONTEND §5.2.1）
  *
- * - state: decks/currentDeck/loading
+ * - state: decks/currentDeck/currentDeckCards/loading
  * - actions: fetchDecks/fetchDeck/createDeck/updateDeck/deleteDeck
+ *            fetchCards/createCard/updateCard/deleteCard
  * - getters: totalCards/dueCountByDeck
  *
  * 规范：Store 间不互引；API 调用走 api 模块（不直接使用 axios）
@@ -11,12 +12,23 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import * as decksApi from '@/api/decks';
-import type { CreateDeckDto, Deck, DeckListItem, DeckQueryParams, UpdateDeckDto } from '@/types';
+import * as cardsApi from '@/api/cards';
+import type {
+  Card,
+  CreateCardDto,
+  CreateDeckDto,
+  Deck,
+  DeckListItem,
+  DeckQueryParams,
+  UpdateCardDto,
+  UpdateDeckDto,
+} from '@/types';
 
 export const useDeckStore = defineStore('deck', () => {
   // ===== state =====
   const decks = ref<DeckListItem[]>([]);
   const currentDeck = ref<Deck | null>(null);
+  const currentDeckCards = ref<Card[]>([]);
   const loading = ref(false);
 
   // ===== getters =====
@@ -31,11 +43,15 @@ export const useDeckStore = defineStore('deck', () => {
     return deck ? deck.due_count : 0;
   }
 
-  // ===== actions =====
+  /** 当前牌组的卡片数 */
+  const currentDeckCardCount = computed(() => currentDeckCards.value.length);
+
+  // ===== 牌组 actions =====
   async function fetchDecks(params?: DeckQueryParams): Promise<void> {
     loading.value = true;
     try {
-      decks.value = await decksApi.getDecks(params);
+      const res = await decksApi.getDecks(params);
+      decks.value = res.items;
     } finally {
       loading.value = false;
     }
@@ -71,22 +87,60 @@ export const useDeckStore = defineStore('deck', () => {
     await fetchDecks(); // 刷新列表
     if (currentDeck.value?.id === id) {
       currentDeck.value = null;
+      currentDeckCards.value = [];
     }
+  }
+
+  // ===== 卡片 actions =====
+  async function fetchCards(deckId: number): Promise<void> {
+    loading.value = true;
+    try {
+      const res = await cardsApi.getCards(deckId);
+      currentDeckCards.value = res.items;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function createCard(deckId: number, data: CreateCardDto): Promise<Card> {
+    const card = await cardsApi.createCard(deckId, data);
+    await fetchCards(deckId); // 刷新当前牌组卡片列表
+    await fetchDecks(); // 刷新聚合字段（card_count 等）
+    return card;
+  }
+
+  async function updateCard(deckId: number, cardId: number, data: UpdateCardDto): Promise<Card> {
+    const card = await cardsApi.updateCard(cardId, data);
+    await fetchCards(deckId); // 刷新列表
+    return card;
+  }
+
+  async function deleteCard(deckId: number, cardId: number): Promise<void> {
+    await cardsApi.deleteCard(cardId);
+    await fetchCards(deckId); // 刷新列表
+    await fetchDecks(); // 刷新聚合字段
   }
 
   return {
     // state
     decks,
     currentDeck,
+    currentDeckCards,
     loading,
     // getters
     totalCards,
     dueCountByDeck,
-    // actions
+    currentDeckCardCount,
+    // 牌组 actions
     fetchDecks,
     fetchDeck,
     createDeck,
     updateDeck,
     deleteDeck,
+    // 卡片 actions
+    fetchCards,
+    createCard,
+    updateCard,
+    deleteCard,
   };
 });

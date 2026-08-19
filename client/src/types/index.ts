@@ -120,7 +120,6 @@ export interface UpdateDeckDto {
 }
 
 export interface CreateCardDto {
-  deckId: number;
   front: string;
   back: string;
   sourceNote?: number | null;
@@ -159,6 +158,16 @@ export interface CardQueryParams {
   page?: number;
   limit?: number;
   sort?: 'created' | 'next_review';
+}
+
+// ===== 分页响应类型 =====
+
+/** 后端列表端点返回的分页包装：{items, total, page, limit} */
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 // ===== 扩展类型（带聚合字段）=====

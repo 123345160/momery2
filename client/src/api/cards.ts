@@ -4,11 +4,11 @@
  */
 
 import client from './client';
-import type { Card, CardQueryParams, CreateCardDto, UpdateCardDto } from '@/types';
+import type { Card, CardQueryParams, CreateCardDto, PaginatedResponse, UpdateCardDto } from '@/types';
 
-/** GET /api/decks/:deckId/cards — 牌组内卡片列表 */
-export function getCards(deckId: number, params?: CardQueryParams): Promise<Card[]> {
-  return client.get(`/decks/${deckId}/cards`, { params }) as unknown as Promise<Card[]>;
+/** GET /api/decks/:deckId/cards — 牌组内卡片列表（分页响应） */
+export function getCards(deckId: number, params?: CardQueryParams): Promise<PaginatedResponse<Card>> {
+  return client.get(`/decks/${deckId}/cards`, { params }) as unknown as Promise<PaginatedResponse<Card>>;
 }
 
 /** POST /api/decks/:deckId/cards — 创建单张卡片 */

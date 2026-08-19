@@ -4,11 +4,18 @@
  */
 
 import client from './client';
-import type { CreateDeckDto, Deck, DeckListItem, DeckQueryParams, UpdateDeckDto } from '@/types';
+import type {
+  CreateDeckDto,
+  Deck,
+  DeckListItem,
+  DeckQueryParams,
+  PaginatedResponse,
+  UpdateDeckDto,
+} from '@/types';
 
-/** GET /api/decks — 牌组列表（含 card_count/due_count 聚合字段） */
-export function getDecks(params?: DeckQueryParams): Promise<DeckListItem[]> {
-  return client.get('/decks', { params }) as unknown as Promise<DeckListItem[]>;
+/** GET /api/decks — 牌组列表（含 card_count/due_count 聚合字段，分页响应） */
+export function getDecks(params?: DeckQueryParams): Promise<PaginatedResponse<DeckListItem>> {
+  return client.get('/decks', { params }) as unknown as Promise<PaginatedResponse<DeckListItem>>;
 }
 
 /** GET /api/decks/:id — 牌组详情 */
