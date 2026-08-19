@@ -157,7 +157,9 @@ export interface DeckQueryParams {
 export interface CardQueryParams {
   page?: number;
   limit?: number;
-  sort?: 'created' | 'next_review';
+  sort?: 'created' | 'next_review' | 'front';
+  search?: string;
+  status?: 'all' | 'due' | 'mastered';
 }
 
 // ===== 分页响应类型 =====

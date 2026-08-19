@@ -21,7 +21,7 @@ import type { CardListQuery } from '../types/index.js';
 
 export const cardController = {
   /**
-   * GET /api/decks/:deckId/cards?page=&limit=&sort=
+   * GET /api/decks/:deckId/cards?page=&limit=&sort=&search=&status=
    */
   listByDeck: asyncHandler(async (req: Request, res: Response) => {
     const deckId = Number(req.params.deckId);
@@ -34,8 +34,12 @@ export const cardController = {
     if (Number.isFinite(pageNum) && pageNum > 0) query.page = pageNum;
     const limitNum = Number(req.query.limit);
     if (Number.isFinite(limitNum) && limitNum > 0) query.limit = limitNum;
-    if (req.query.sort === 'created' || req.query.sort === 'next_review') {
+    if (req.query.sort === 'created' || req.query.sort === 'next_review' || req.query.sort === 'front') {
       query.sort = req.query.sort;
+    }
+    if (typeof req.query.search === 'string') query.search = req.query.search;
+    if (req.query.status === 'all' || req.query.status === 'due' || req.query.status === 'mastered') {
+      query.status = req.query.status;
     }
 
     const result = cardService.listByDeck(deckId, query);

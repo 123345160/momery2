@@ -15,6 +15,7 @@ import * as decksApi from '@/api/decks';
 import * as cardsApi from '@/api/cards';
 import type {
   Card,
+  CardQueryParams,
   CreateCardDto,
   CreateDeckDto,
   Deck,
@@ -30,6 +31,11 @@ export const useDeckStore = defineStore('deck', () => {
   const currentDeck = ref<Deck | null>(null);
   const currentDeckCards = ref<Card[]>([]);
   const loading = ref(false);
+
+  // 当前卡片查询参数（搜索/排序/状态筛选），CRUD 后用同一条件重查
+  const currentCardQuery = ref<CardQueryParams>({});
+  // 当前牌组卡片总数（服务端按筛选条件返回的 total）
+  const currentDeckCardsTotal = ref(0);
 
   // ===== getters =====
   /** 全部卡片总数（跨牌组） */
@@ -92,11 +98,14 @@ export const useDeckStore = defineStore('deck', () => {
   }
 
   // ===== 卡片 actions =====
-  async function fetchCards(deckId: number): Promise<void> {
+  async function fetchCards(deckId: number, params?: CardQueryParams): Promise<void> {
     loading.value = true;
     try {
-      const res = await cardsApi.getCards(deckId);
+      const query = params ?? currentCardQuery.value;
+      currentCardQuery.value = query;
+      const res = await cardsApi.getCards(deckId, query);
       currentDeckCards.value = res.items;
+      currentDeckCardsTotal.value = res.total;
     } finally {
       loading.value = false;
     }
@@ -104,20 +113,20 @@ export const useDeckStore = defineStore('deck', () => {
 
   async function createCard(deckId: number, data: CreateCardDto): Promise<Card> {
     const card = await cardsApi.createCard(deckId, data);
-    await fetchCards(deckId); // 刷新当前牌组卡片列表
+    await fetchCards(deckId); // 用当前查询条件刷新列表
     await fetchDecks(); // 刷新聚合字段（card_count 等）
     return card;
   }
 
   async function updateCard(deckId: number, cardId: number, data: UpdateCardDto): Promise<Card> {
     const card = await cardsApi.updateCard(cardId, data);
-    await fetchCards(deckId); // 刷新列表
+    await fetchCards(deckId); // 用当前查询条件刷新列表
     return card;
   }
 
   async function deleteCard(deckId: number, cardId: number): Promise<void> {
     await cardsApi.deleteCard(cardId);
-    await fetchCards(deckId); // 刷新列表
+    await fetchCards(deckId); // 用当前查询条件刷新列表
     await fetchDecks(); // 刷新聚合字段
   }
 
@@ -126,6 +135,8 @@ export const useDeckStore = defineStore('deck', () => {
     decks,
     currentDeck,
     currentDeckCards,
+    currentDeckCardsTotal,
+    currentCardQuery,
     loading,
     // getters
     totalCards,

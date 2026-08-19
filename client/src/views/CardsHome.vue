@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // CardsHome.vue — 牌组网格页（FRONTEND §3.2.2 + §4.1 路由 /cards）
-// 装配 DeckGrid + 牌组 CRUD（创建/编辑/删除）
+// 装配 DeckGrid + 牌组 CRUD（创建/编辑/删除）+ 牌组搜索
 //
-// 决策点 2：删除二次确认 Modal
-// 决策点 3：新建按钮放在页面内顶部（不依赖全局 CreateButton）
+// Stage 5b：接入牌组搜索（后端已支持 search 参数，300ms 防抖）
 
 import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -23,6 +22,18 @@ const editingDeck = ref<Deck | null>(null);
 // 删除确认弹窗状态
 const deleteModalVisible = ref(false);
 const deletingDeck = ref<DeckListItem | null>(null);
+
+// 牌组搜索（300ms 防抖）
+const searchInput = ref('');
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function onSearchInput(): void {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    const search = searchInput.value.trim();
+    deckStore.fetchDecks(search ? { search } : undefined);
+  }, 300);
+}
 
 onMounted(async () => {
   await deckStore.fetchDecks();
@@ -90,6 +101,15 @@ const deleteModalTitle = computed(() =>
   <div class="cards-home">
     <header class="cards-home__header">
       <h1 class="cards-home__title">记忆卡片</h1>
+      <div class="cards-home__search">
+        <input
+          v-model="searchInput"
+          class="cards-home__search-input"
+          type="text"
+          placeholder="搜索牌组名称 / 描述…"
+          @input="onSearchInput"
+        />
+      </div>
       <button class="cards-home__create" @click="onCreateDeck">
         + 新建牌组
       </button>
@@ -157,6 +177,34 @@ const deleteModalTitle = computed(() =>
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  flex-shrink: 0;
+}
+
+.cards-home__search {
+  flex: 1;
+  max-width: 320px;
+}
+
+.cards-home__search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.cards-home__search-input:focus {
+  border-color: var(--accent);
+}
+
+.cards-home__search-input::placeholder {
+  color: var(--text-muted);
 }
 
 .cards-home__create {

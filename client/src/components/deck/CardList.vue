@@ -1,23 +1,22 @@
 <script setup lang="ts">
 // CardList.vue — 卡片列表（FRONTEND §3.2.3）
-// Props: cards: Card[], deckName: string, loading: boolean
-// Events: @edit(cardId), @delete(cardId), @create
+// Props: cards: Card[], loading: boolean
+// Events: @edit(cardId), @delete(cardId)
 // 子组件: CardItem
-// 含 loading 骨架屏 + 空态 + 「新建卡片」按钮
+// 含 loading 骨架屏 + 空态
+// Stage 5b：移除冗余标题/新建按钮（由父页面 DeckDetail 统一管理）
 
 import type { Card } from '@/types';
 import CardItem from './CardItem.vue';
 
 defineProps<{
   cards: Card[];
-  deckName: string;
   loading: boolean;
 }>();
 
 const emit = defineEmits<{
   edit: [cardId: number];
   delete: [cardId: number];
-  create: [];
 }>();
 
 function onEdit(cardId: number): void {
@@ -27,21 +26,10 @@ function onEdit(cardId: number): void {
 function onDelete(cardId: number): void {
   emit('delete', cardId);
 }
-
-function onCreate(): void {
-  emit('create');
-}
 </script>
 
 <template>
   <div class="card-list">
-    <header class="card-list__header">
-      <h2 class="card-list__title">{{ deckName }}</h2>
-      <button class="card-list__create" @click="onCreate">
-        + 新建卡片
-      </button>
-    </header>
-
     <!-- 加载骨架屏 -->
     <div v-if="loading" class="card-list__loading">
       <div
@@ -53,8 +41,8 @@ function onCreate(): void {
 
     <!-- 空态 -->
     <div v-else-if="cards.length === 0" class="card-list__empty">
-      <p class="card-list__empty-text">该牌组还没有卡片</p>
-      <p class="card-list__empty-hint">点击上方「新建卡片」开始添加</p>
+      <p class="card-list__empty-text">没有符合条件的卡片</p>
+      <p class="card-list__empty-hint">尝试调整搜索或筛选条件</p>
     </div>
 
     <!-- 列表 -->
@@ -73,35 +61,6 @@ function onCreate(): void {
 <style scoped>
 .card-list {
   width: 100%;
-}
-
-.card-list__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.card-list__title {
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.card-list__create {
-  padding: 6px 16px;
-  font-size: var(--font-size-base);
-  color: var(--bg-primary);
-  background-color: var(--accent);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.card-list__create:hover {
-  background-color: var(--accent-hover);
 }
 
 .card-list__loading {

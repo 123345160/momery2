@@ -1,17 +1,17 @@
 <script setup lang="ts">
 // DeckDetail.vue — 牌组详情（卡片列表）（FRONTEND §3.2.2 + §4.1 路由 /cards/deck/:deckId）
-// 装配 CardList + 卡片 CRUD（创建/编辑/删除）
+// 装配 CardToolbar + CardList + 卡片 CRUD（创建/编辑/删除）
 //
-// 决策点 2：删除二次确认 Modal
-// 决策点 3：新建按钮放在页面内顶部
+// Stage 5b：接入搜索/排序/状态筛选，CRUD 后用当前查询条件刷新
 
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDeckStore } from '@/stores/deck';
 import CardList from '@/components/deck/CardList.vue';
+import CardToolbar from '@/components/deck/CardToolbar.vue';
 import CardCreateForm from '@/components/deck/CardCreateForm.vue';
 import Modal from '@/components/common/Modal.vue';
-import type { Card, CreateCardDto, UpdateCardDto } from '@/types';
+import type { Card, CardQueryParams, CreateCardDto, UpdateCardDto } from '@/types';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,8 +20,13 @@ const deckStore = useDeckStore();
 // 路由参数
 const deckId = computed<number>(() => Number(route.params.deckId));
 
-// 牌组名（用于 CardList 标题）
+// 牌组名（用于页面标题）
 const deckName = computed<string>(() => deckStore.currentDeck?.name ?? '牌组详情');
+
+// 筛选/排序/搜索状态
+const searchQuery = ref('');
+const sortQuery = ref<'created' | 'next_review' | 'front'>('created');
+const statusQuery = ref<'all' | 'due' | 'mastered'>('all');
 
 // 创建/编辑弹窗状态
 const formModalVisible = ref(false);
@@ -34,8 +39,20 @@ const deletingCard = ref<Card | null>(null);
 onMounted(async () => {
   await Promise.all([
     deckStore.fetchDeck(deckId.value),
-    deckStore.fetchCards(deckId.value),
+    deckStore.fetchCards(deckId.value, { sort: 'created', status: 'all' }),
   ]);
+});
+
+// 筛选条件变化时重新查询
+watch([searchQuery, sortQuery, statusQuery], () => {
+  const query: CardQueryParams = {
+    sort: sortQuery.value,
+    status: statusQuery.value,
+  };
+  if (searchQuery.value.trim()) {
+    query.search = searchQuery.value.trim();
+  }
+  deckStore.fetchCards(deckId.value, query);
 });
 
 // 返回牌组网格
@@ -103,19 +120,24 @@ const deleteModalTitle = computed(() =>
         ← 返回牌组
       </button>
       <h1 class="deck-detail__title">{{ deckName }}</h1>
+      <span class="deck-detail__count">共 {{ deckStore.currentDeckCardsTotal }} 张</span>
       <button class="deck-detail__create" @click="onCreateCard">
         + 新建卡片
       </button>
     </header>
 
+    <CardToolbar
+      v-model:search="searchQuery"
+      v-model:sort="sortQuery"
+      v-model:status="statusQuery"
+    />
+
     <div class="deck-detail__content">
       <CardList
         :cards="deckStore.currentDeckCards"
-        :deck-name="deckName"
         :loading="deckStore.loading"
         @edit="onEditCard"
         @delete="onDeleteCard"
-        @create="onCreateCard"
       />
     </div>
 
@@ -193,6 +215,12 @@ const deleteModalTitle = computed(() =>
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.deck-detail__count {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .deck-detail__create {

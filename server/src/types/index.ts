@@ -243,7 +243,9 @@ export interface DeckListQuery {
 export interface CardListQuery {
   page?: number;
   limit?: number;
-  sort?: 'created' | 'next_review';
+  sort?: 'created' | 'next_review' | 'front';
+  search?: string;
+  status?: 'all' | 'due' | 'mastered';
 }
 
 /** 批量创建卡片请求体 */

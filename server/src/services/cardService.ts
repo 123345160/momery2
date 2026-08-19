@@ -15,6 +15,7 @@ import { cardRepo } from '../repositories/cardRepo.js';
 import { deckRepo } from '../repositories/deckRepo.js';
 import { AppError } from '../utils/AppError.js';
 import { ErrorCodes } from '../utils/errorCodes.js';
+import { toSqliteUTC } from '../utils/sqliteTime.js';
 import type {
   Card,
   CardInsertDTO,
@@ -29,6 +30,10 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const MAX_CARD_CONTENT = 10000;
+
+// 已掌握口径（AGENT_CONSTITUTION §15 冻结常量）
+const MASTERED_MIN_REPETITIONS = 3;
+const MASTERED_MIN_INTERVAL = 30240; // 21 天，单位：分钟
 
 /** 规范化分页参数 */
 function normalizePagination(page?: number, limit?: number): { page: number; limit: number } {
@@ -71,8 +76,13 @@ function validateDeckExists(deckId: number): void {
 
 export const cardService = {
   /**
-   * 牌组下卡片列表（分页 + 排序）
-   * GET /api/decks/:deckId/cards?page=&limit=&sort=
+   * 牌组下卡片列表（分页 + 排序 + 搜索 + 状态筛选）
+   * GET /api/decks/:deckId/cards?page=&limit=&sort=&search=&status=
+   *
+   * 内存过滤模式：沿用 deckService.list 的「V1.0 数据量小，内存过滤足够」模式
+   * - search：front/back 模糊匹配（大小写不敏感）
+   * - status：all（默认）/ due（next_review <= now）/ mastered（repetitions>=3 且 interval>=30240）
+   * - sort：created（默认，repo 已排序）/ next_review / front（字母序）
    */
   listByDeck(deckId: number, query: CardListQuery): PaginatedResult<Card> {
     // 校验牌组存在
@@ -80,17 +90,40 @@ export const cardService = {
 
     const { page, limit } = normalizePagination(query.page, query.limit);
     const sort = query.sort ?? 'created';
+    const search = query.search?.trim() ?? '';
+    const status = query.status ?? 'all';
 
-    // 获取全部卡片（V1.0 数据量小，内存排序足够）
+    // 获取全部卡片（V1.0 数据量小，内存过滤足够）
     let cards = cardRepo.getByDeck(deckId);
 
-    // 排序
-    if (sort === 'next_review') {
-      cards = [...cards].sort((a, b) =>
-        a.next_review.localeCompare(b.next_review),
+    // 搜索过滤（front/back 模糊匹配，大小写不敏感，沿用 deckService 模式）
+    if (search) {
+      const lower = search.toLowerCase();
+      cards = cards.filter(
+        (c) =>
+          c.front.toLowerCase().includes(lower) ||
+          c.back.toLowerCase().includes(lower),
       );
     }
-    // sort === 'created' 时 cardRepo.getByDeck 已按 created_at 排序
+
+    // 状态筛选
+    if (status === 'due') {
+      const nowUTC = toSqliteUTC(new Date());
+      cards = cards.filter((c) => c.next_review <= nowUTC);
+    } else if (status === 'mastered') {
+      cards = cards.filter(
+        (c) =>
+          c.repetitions >= MASTERED_MIN_REPETITIONS &&
+          c.interval >= MASTERED_MIN_INTERVAL,
+      );
+    }
+
+    // 排序（created 时 repo.getByDeck 已按 created_at 排序，无需再排）
+    if (sort === 'next_review') {
+      cards = [...cards].sort((a, b) => a.next_review.localeCompare(b.next_review));
+    } else if (sort === 'front') {
+      cards = [...cards].sort((a, b) => a.front.localeCompare(b.front, 'zh-Hans'));
+    }
 
     const total = cards.length;
 
