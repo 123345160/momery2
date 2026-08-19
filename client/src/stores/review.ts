@@ -11,7 +11,8 @@ import { ref, computed } from 'vue';
 import * as reviewApi from '@/api/review';
 import type { Card, ReviewResult } from '@/types';
 
-interface SessionStats {
+/** 会话统计（供 ReviewSummary 结算展示） */
+export interface SessionStats {
   reviewed: number;
   forgot: number;
   hard: number;

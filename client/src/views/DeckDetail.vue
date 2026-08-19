@@ -60,6 +60,11 @@ function onBack(): void {
   router.push('/cards');
 }
 
+// 开始复习（进入复习模式）
+function onStartReview(): void {
+  router.push(`/cards/review/${deckId.value}`);
+}
+
 // 新建卡片
 function onCreateCard(): void {
   editingCard.value = null;
@@ -121,6 +126,14 @@ const deleteModalTitle = computed(() =>
       </button>
       <h1 class="deck-detail__title">{{ deckName }}</h1>
       <span class="deck-detail__count">共 {{ deckStore.currentDeckCardsTotal }} 张</span>
+      <button
+        class="deck-detail__review"
+        :disabled="deckStore.currentDeck?.due_count === 0"
+        :title="deckStore.currentDeck?.due_count ? `${deckStore.currentDeck.due_count} 张待复习` : '没有到期卡片'"
+        @click="onStartReview"
+      >
+        开始复习{{ deckStore.currentDeck?.due_count ? `（${deckStore.currentDeck.due_count}）` : '' }}
+      </button>
       <button class="deck-detail__create" @click="onCreateCard">
         + 新建卡片
       </button>
@@ -221,6 +234,27 @@ const deleteModalTitle = computed(() =>
   font-size: var(--font-size-sm);
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+.deck-detail__review {
+  padding: 6px 16px;
+  font-size: var(--font-size-base);
+  color: var(--bg-primary);
+  background-color: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.deck-detail__review:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.deck-detail__review:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .deck-detail__create {

@@ -19,6 +19,7 @@ import type {
   CreateCardDto,
   CreateDeckDto,
   Deck,
+  DeckDetail,
   DeckListItem,
   DeckQueryParams,
   UpdateCardDto,
@@ -28,7 +29,7 @@ import type {
 export const useDeckStore = defineStore('deck', () => {
   // ===== state =====
   const decks = ref<DeckListItem[]>([]);
-  const currentDeck = ref<Deck | null>(null);
+  const currentDeck = ref<DeckDetail | null>(null);
   const currentDeckCards = ref<Card[]>([]);
   const loading = ref(false);
 
@@ -79,13 +80,12 @@ export const useDeckStore = defineStore('deck', () => {
     return deck;
   }
 
-  async function updateDeck(id: number, data: UpdateDeckDto): Promise<Deck> {
-    const deck = await decksApi.updateDeck(id, data);
+  async function updateDeck(id: number, data: UpdateDeckDto): Promise<void> {
+    await decksApi.updateDeck(id, data);
     await fetchDecks(); // 刷新列表
     if (currentDeck.value?.id === id) {
-      currentDeck.value = deck;
+      await fetchDeck(id); // 重新拉取详情（后端 PUT 仅返回 { id }）
     }
-    return deck;
   }
 
   async function deleteDeck(id: number): Promise<void> {

@@ -7,6 +7,7 @@ import client from './client';
 import type {
   CreateDeckDto,
   Deck,
+  DeckDetail,
   DeckListItem,
   DeckQueryParams,
   PaginatedResponse,
@@ -18,9 +19,9 @@ export function getDecks(params?: DeckQueryParams): Promise<PaginatedResponse<De
   return client.get('/decks', { params }) as unknown as Promise<PaginatedResponse<DeckListItem>>;
 }
 
-/** GET /api/decks/:id — 牌组详情 */
-export function getDeck(id: number): Promise<DeckListItem> {
-  return client.get(`/decks/${id}`) as unknown as Promise<DeckListItem>;
+/** GET /api/decks/:id — 牌组详情（含 card_count/due_count 聚合字段） */
+export function getDeck(id: number): Promise<DeckDetail> {
+  return client.get(`/decks/${id}`) as unknown as Promise<DeckDetail>;
 }
 
 /** POST /api/decks — 创建牌组 */
@@ -28,9 +29,9 @@ export function createDeck(data: CreateDeckDto): Promise<Deck> {
   return client.post('/decks', data) as unknown as Promise<Deck>;
 }
 
-/** PUT /api/decks/:id — 更新牌组 */
-export function updateDeck(id: number, data: UpdateDeckDto): Promise<Deck> {
-  return client.put(`/decks/${id}`, data) as unknown as Promise<Deck>;
+/** PUT /api/decks/:id — 更新牌组（后端仅返回 { id }） */
+export function updateDeck(id: number, data: UpdateDeckDto): Promise<void> {
+  return client.put(`/decks/${id}`, data) as unknown as Promise<void>;
 }
 
 /** DELETE /api/decks/:id — 删除牌组 */
