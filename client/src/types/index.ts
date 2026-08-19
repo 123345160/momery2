@@ -95,10 +95,13 @@ export interface Exam {
 
 // ===== 树形结构 =====
 
+/** 文件夹树节点（GET /api/folders/tree 返回，与后端对齐） */
 export interface FolderNode {
-  folder: Folder;
+  id: number;
+  name: string;
+  parentId: number | null;
+  noteCount: number;
   children: FolderNode[];
-  note_count: number;
 }
 
 // ===== DTO 类型 =====
@@ -257,10 +260,12 @@ export interface ToastItem {
 
 // ===== M1 预留类型（Stage 4 不使用，占位以保结构完整）=====
 
+/** 学习时间轴条目（GET /api/stats/timeline 返回，与后端对齐） */
 export interface TimelineItem {
   id: number;
-  type: 'note' | 'card' | 'review';
-  title: string;
-  timestamp: string;
-  meta?: Record<string, unknown>;
+  cardId: number | null;
+  cardFront: string | null;
+  deckName: string | null;
+  result: string;
+  reviewedAt: string;
 }
