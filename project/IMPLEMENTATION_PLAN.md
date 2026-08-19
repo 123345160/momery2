@@ -15,8 +15,8 @@
 | 2 | 后端横切骨架：config/logger/response/AppError/错误码全量清单、中间件三件套、app.ts（health 注册于 authGuard 之前）、index.ts 启动时序 | ARCH §15.1 启动线 3 条 + §15.4 运维线 4 条；STANDARDS §13.2/§13.3/§13.5/§13.6 | ✅ |
 | 3 | 后端 V1.0 业务域（依赖序）：deck → card → review（sm2+事务）→ importExport → stats 基础。每域走 STANDARDS §11 七步 | ARCH §15.2 接口线 + §15.3 业务线；CHARTER 技术验收 2-6 | ✅ |
 | 4 | 前端骨架：路由表 + 布局组件 + 5 stores + api/client + V1.0 api 模块 + 设计令牌 | FRONTEND §9.2 布局验收 5 条 + §9.4 状态管理验收 3 条 | ✅ |
-| 5 | 前端 V1.0 页面：牌组网格、卡片列表/编辑（Markdown 渲染）、复习模式（4 级按钮+进度条）、数据面板、导入导出 | FRONTEND §9.3 组件验收 4 条；CHARTER 功能验收 1-7 | ⬜ |
-| 6 | V1.0 联调验收：DESIGN §12 验证流程走通（建卡→复习→统计→导出→删→导入） | CHARTER §1.5 全部（10 功能+7 技术）；V1.0 完成判据（CHARTER §4.2）→ **V1.0 达成** | ⬜ |
+| 5 | 前端 V1.0 页面：牌组网格、卡片列表/编辑（Markdown 渲染）、复习模式（4 级按钮+进度条）、数据面板、导入导出 | FRONTEND §9.3 组件验收 4 条；CHARTER 功能验收 1-7 | ✅ |
+| 6 | V1.0 联调验收：DESIGN §12 验证流程走通（建卡→复习→统计→导出→删→导入） | CHARTER §1.5 全部（10 功能+7 技术）；V1.0 完成判据（CHARTER §4.2）→ **V1.0 达成** | 🔨 |
 | 7 | M1 后端增量（CHARTER M1 前置依赖序）：folder → note（multer 附件）→ 笔记转卡 → template → exam → stats 增强 → search | ARCH §15.2/§15.3 覆盖 41 端点全集 | ⬜ |
 | 8 | M1 前端增量：笔记三视图、日历热力图、时间轴、模板管理、考试与目标、全局搜索 | FRONTEND §9.3/§9.4 全量；CHARTER 功能验收 8 | ⬜ |
 | 9 | M1 联调验收：DESIGN §12 全量 + M1 全链路（笔记→转卡片→复习→统计） | CHARTER §1.5 全量；M1 完成判据 → **M1 达成** | ⬜ |

@@ -3,17 +3,23 @@
 // 装配 DeckGrid + 牌组 CRUD（创建/编辑/删除）+ 牌组搜索
 //
 // Stage 5b：接入牌组搜索（后端已支持 search 参数，300ms 防抖）
+// Stage 5c：接入 JSON 导入（ImportModal）与导出（ExportModal，单牌组/全量）
 
 import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDeckStore } from '@/stores/deck';
+import { useUIStore } from '@/stores/ui';
+import { exportAll, exportDeck, importJson } from '@/api/importExport';
 import DeckGrid from '@/components/deck/DeckGrid.vue';
 import DeckFormModal from '@/components/deck/DeckFormModal.vue';
+import ImportModal from '@/components/common/ImportModal.vue';
+import ExportModal from '@/components/common/ExportModal.vue';
 import Modal from '@/components/common/Modal.vue';
-import type { CreateDeckDto, Deck, DeckListItem, UpdateDeckDto } from '@/types';
+import type { CreateDeckDto, Deck, DeckListItem, ImportJsonDto, UpdateDeckDto } from '@/types';
 
 const router = useRouter();
 const deckStore = useDeckStore();
+const uiStore = useUIStore();
 
 // 创建/编辑弹窗状态
 const formModalVisible = ref(false);
@@ -95,6 +101,70 @@ async function onSubmitDeck(data: CreateDeckDto | UpdateDeckDto): Promise<void> 
 const deleteModalTitle = computed(() =>
   deletingDeck.value ? `删除牌组「${deletingDeck.value.name}」` : '删除牌组'
 );
+
+// ===== 导入导出（Stage 5c，DESIGN §4.3.2 / §7.10）=====
+
+const importModalVisible = ref(false);
+const exportModalVisible = ref(false);
+const importing = ref(false);
+
+/** 导出文件名时间戳：YYYYMMDD-HHmmss */
+function timestamp(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+}
+
+/** 触发浏览器下载 */
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 确认导入 → POST /api/import/json → 摘要 toast → 刷新牌组列表
+async function onImport(data: ImportJsonDto): Promise<void> {
+  if (importing.value) return;
+  importing.value = true;
+  try {
+    const summary = await importJson(data);
+    importModalVisible.value = false;
+    uiStore.showToast(
+      `导入完成：新增牌组 ${summary.decksCreated}，合并 ${summary.decksMerged}，插入卡片 ${summary.cardsInserted}，跳过 ${summary.cardsSkipped}`,
+      'success'
+    );
+    await deckStore.fetchDecks();
+  } catch (err) {
+    uiStore.showToast('导入失败：' + (err as Error).message, 'error');
+  } finally {
+    importing.value = false;
+  }
+}
+
+// 确认导出（单牌组 / 全量）→ 下载 JSON 文件
+async function onExport(deckId: number | 'all'): Promise<void> {
+  try {
+    exportModalVisible.value = false;
+    let blob: Blob;
+    let filename: string;
+    if (deckId === 'all') {
+      blob = await exportAll();
+      filename = `memory-export-all-${timestamp()}.json`;
+    } else {
+      const deck = deckStore.decks.find((d) => d.id === deckId);
+      blob = await exportDeck(deckId);
+      const safeName = (deck?.name ?? `deck-${deckId}`).replace(/[\\/:*?"<>|]/g, '_');
+      filename = `memory-deck-${safeName}-${timestamp()}.json`;
+    }
+    downloadBlob(blob, filename);
+    uiStore.showToast('导出成功，已开始下载', 'success');
+  } catch (err) {
+    uiStore.showToast('导出失败：' + (err as Error).message, 'error');
+  }
+}
 </script>
 
 <template>
@@ -110,9 +180,17 @@ const deleteModalTitle = computed(() =>
           @input="onSearchInput"
         />
       </div>
-      <button class="cards-home__create" @click="onCreateDeck">
-        + 新建牌组
-      </button>
+      <div class="cards-home__actions">
+        <button class="cards-home__secondary" @click="importModalVisible = true">
+          导入 JSON
+        </button>
+        <button class="cards-home__secondary" @click="exportModalVisible = true">
+          导出
+        </button>
+        <button class="cards-home__create" @click="onCreateDeck">
+          + 新建牌组
+        </button>
+      </div>
     </header>
 
     <div class="cards-home__content">
@@ -130,6 +208,19 @@ const deleteModalTitle = computed(() =>
       :edit-deck="editingDeck"
       @close="formModalVisible = false"
       @submit="onSubmitDeck"
+    />
+
+    <ImportModal
+      :visible="importModalVisible"
+      @close="importModalVisible = false"
+      @import="onImport"
+    />
+
+    <ExportModal
+      :visible="exportModalVisible"
+      :decks="deckStore.decks"
+      @close="exportModalVisible = false"
+      @export="onExport"
     />
 
     <Modal
@@ -205,6 +296,29 @@ const deleteModalTitle = computed(() =>
 
 .cards-home__search-input::placeholder {
   color: var(--text-muted);
+}
+
+.cards-home__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cards-home__secondary {
+  padding: 6px 14px;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.cards-home__secondary:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .cards-home__create {

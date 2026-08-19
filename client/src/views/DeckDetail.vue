@@ -3,10 +3,13 @@
 // 装配 CardToolbar + CardList + 卡片 CRUD（创建/编辑/删除）
 //
 // Stage 5b：接入搜索/排序/状态筛选，CRUD 后用当前查询条件刷新
+// Stage 5c：接入单牌组导出（GET /api/export/deck/:id → JSON 下载）
 
 import { onMounted, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDeckStore } from '@/stores/deck';
+import { useUIStore } from '@/stores/ui';
+import { exportDeck } from '@/api/importExport';
 import CardList from '@/components/deck/CardList.vue';
 import CardToolbar from '@/components/deck/CardToolbar.vue';
 import CardCreateForm from '@/components/deck/CardCreateForm.vue';
@@ -16,6 +19,7 @@ import type { Card, CardQueryParams, CreateCardDto, UpdateCardDto } from '@/type
 const route = useRoute();
 const router = useRouter();
 const deckStore = useDeckStore();
+const uiStore = useUIStore();
 
 // 路由参数
 const deckId = computed<number>(() => Number(route.params.deckId));
@@ -116,6 +120,38 @@ async function onSubmitCard(data: CreateCardDto | UpdateCardDto): Promise<void> 
 const deleteModalTitle = computed(() =>
   deletingCard.value ? `删除卡片 #${deletingCard.value.id}` : '删除卡片'
 );
+
+// ===== 导出牌组（Stage 5c）=====
+
+const exporting = ref(false);
+
+/** 导出文件名时间戳：YYYYMMDD-HHmmss */
+function timestamp(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+}
+
+// 导出当前牌组 → 下载 JSON 文件（含卡片与 SM-2 进度）
+async function onExportDeck(): Promise<void> {
+  if (exporting.value) return;
+  exporting.value = true;
+  try {
+    const blob = await exportDeck(deckId.value);
+    const safeName = deckName.value.replace(/[\\/:*?"<>|]/g, '_');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `memory-deck-${safeName}-${timestamp()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    uiStore.showToast('导出成功，已开始下载', 'success');
+  } catch (err) {
+    uiStore.showToast('导出失败：' + (err as Error).message, 'error');
+  } finally {
+    exporting.value = false;
+  }
+}
 </script>
 
 <template>
@@ -133,6 +169,13 @@ const deleteModalTitle = computed(() =>
         @click="onStartReview"
       >
         开始复习{{ deckStore.currentDeck?.due_count ? `（${deckStore.currentDeck.due_count}）` : '' }}
+      </button>
+      <button
+        class="deck-detail__secondary"
+        :disabled="exporting"
+        @click="onExportDeck"
+      >
+        {{ exporting ? '导出中…' : '导出牌组' }}
       </button>
       <button class="deck-detail__create" @click="onCreateCard">
         + 新建卡片
@@ -253,6 +296,28 @@ const deleteModalTitle = computed(() =>
 }
 
 .deck-detail__review:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.deck-detail__secondary {
+  padding: 6px 14px;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.deck-detail__secondary:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.deck-detail__secondary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }

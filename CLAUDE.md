@@ -74,7 +74,11 @@
 | 1 | 数据库层（connection + migrate + 8 repo） | [docs/stage1-database-verification.md](docs/stage1-database-verification.md) | ✅ |
 | 2 | 后端横切骨架（config/logger/response/AppError/中间件/app/index） | — | ✅ |
 | 3a | Deck & Card API（service/controller/routes 10 端点） | [docs/stage3-deck-card-api-verification.md](docs/stage3-deck-card-api-verification.md) | ✅ |
-| 3b-8 | Review → 前端骨架 → 逐步联调 | — | ⬜ |
+| 3b | Review API（SM-2 + 事务）+ importExport + stats | [docs/stage3b-review-api-verification.md](docs/stage3b-review-api-verification.md)、[docs/stage3c-import-export-stats-verification.md](docs/stage3c-import-export-stats-verification.md) | ✅ |
+| 4 | 前端骨架（路由 + 布局 + 5 stores + api/client + 设计令牌） | — | ✅ |
+| 5 | 前端 V1.0 页面（5a 牌组/卡片、5b 搜索筛选、复习模式、5c 数据面板+导入导出） | — | ✅ |
+| 6 | V1.0 联调验收（复习链路已闭环，DESIGN §12 全流程进行中） | — | 🔨 |
+| 7-8 | M1 增量（folder/note/exam/search + 前端对应页面） | — | ⬜ |
 
 ## 冻结常量速查（出处为准，编码时禁止改动）
 
