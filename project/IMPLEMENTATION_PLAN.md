@@ -19,7 +19,7 @@
 | 6 | V1.0 联调验收：DESIGN §12 验证流程走通（建卡→复习→统计→导出→删→导入） | CHARTER §1.5 全部（10 功能+7 技术）；V1.0 完成判据（CHARTER §4.2）→ **V1.0 达成** | ✅ |
 | 7 | M1 后端增量（CHARTER M1 前置依赖序）：folder → note（multer 附件）→ 笔记转卡 → template → exam → stats 增强 → search | ARCH §15.2/§15.3 覆盖 41 端点全集 | ✅ |
 | 8 | M1 前端增量：笔记三视图、日历热力图、时间轴、模板管理、考试与目标、全局搜索 | FRONTEND §9.3/§9.4 全量；CHARTER 功能验收 8 | ✅ |
-| 9 | M1 联调验收：DESIGN §12 全量 + M1 全链路（笔记→转卡片→复习→统计） | CHARTER §1.5 全量；M1 完成判据 → **M1 达成** | ⬜ |
+| 9 | M1 联调验收：DESIGN §12 全量 + M1 全链路（笔记→转卡片→复习→统计→模板→考试→搜索→导入导出回环） | CHARTER §1.5 全量；M1 完成判据 → **M1 达成** | ✅ |
 
 ## 验收标准汇总（关卡速查，条目原文见出处）
 
@@ -84,3 +84,20 @@
 **附注（非缺陷）**：
 - 用 PowerShell `Invoke-RestMethod` 发送含中文的 JSON body 会触发 `body-parser` 的 `Unterminated string in JSON` 报错（PowerShell UTF-8 编码截断），纯 ASCII 或 `fetch` 正常，属测试客户端问题，非后端缺陷。
 - `export/all` 顶层无 `cards` 字段（cards 嵌于 `decks[].cards`），导入按 name 幂等合并（同名 deck 合并、front 相同卡跳过），属预期行为。
+
+## Stage 9 M1 联调验收记录（2026-08-19）
+
+通过启动后端（tsx，端口 3000）+ fetch 脚本跑通 M1 全链路 E2E（9 组全过）：
+
+| 环节 | 结果 |
+|------|------|
+| 文件夹 + 笔记 | `POST /folders` + `POST /notes` → 树形 noteCount 正确 ✓ |
+| 转卡 + 复习闭环 | `POST /notes/:id/convert` → 提取 2 卡 → `review good` × 2 → reviewedToday=2 ✓ |
+| 统计扩展 | `GET /stats/overview`、`/stats/calendar?days=7`、`/stats/timeline?limit=10` 全字段返回 ✓ |
+| 模板 + 预置保护 | `GET /templates`（预置 3 个）、`POST` 自定义、预置改/删 409 拒绝、自定义更新成功 ✓ |
+| 考试 + 进度 | `POST /exams` + `GET /exams/:id/progress` → daysLeft/currentCount 正确 ✓ |
+| 全局搜索 | `GET /search?q=&category=decks|notes|cards|all` 跨表命中正确 ✓ |
+| 导出增强 | `GET /export/all` 含真实 notes/templates（按 folder_name 还原） ✓ |
+| 导入回环（干净） | 删笔记+模板 → `POST /import/json` → notesInserted=1, templatesInserted=1, 笔记恢复 ✓ |
+
+**验收结论**：CHARTER M1 全部功能通过，M1 完成判据达成 → **M1 达成**。
