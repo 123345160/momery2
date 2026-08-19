@@ -13,6 +13,5 @@ export const statsRoutes = Router();
 statsRoutes.get('/overview', statsController.overview); // GET /api/stats/overview
 
 // M1（Stage 7）：统计可视化
-// statsRoutes.get('/calendar', statsController.calendar);   // GET /api/stats/calendar?year=&month=
-// statsRoutes.get('/timeline', statsController.timeline);   // GET /api/stats/timeline?page=&limit=
-// statsRoutes.get('/deck/:id', statsController.deckStats); // GET /api/stats/deck/:id
+statsRoutes.get('/calendar', statsController.calendar); // GET /api/stats/calendar?days=
+statsRoutes.get('/timeline', statsController.timeline); // GET /api/stats/timeline?limit=

@@ -13,7 +13,7 @@
  */
 
 import { statsRepo } from '../repositories/statsRepo.js';
-import type { StatsOverview } from '../types/index.js';
+import type { StatsOverview, CalendarDay, TimelineItem } from '../types/index.js';
 
 export const statsService = {
   /**
@@ -41,5 +41,23 @@ export const statsService = {
       streakDays,
       accuracy,
     };
+  },
+
+  /**
+   * 复习日历热力数据（GET /api/stats/calendar?days=）
+   * 最近 days 天每天复习次数，缺数据补 0
+   */
+  calendar(days: number): CalendarDay[] {
+    const d = Math.min(365, Math.max(7, Math.floor(days || 30)));
+    return statsRepo.getCalendar(d);
+  },
+
+  /**
+   * 学习时间轴（GET /api/stats/timeline?limit=）
+   * 近期 review_logs 明细，按时间倒序
+   */
+  timeline(limit: number): TimelineItem[] {
+    const l = Math.min(200, Math.max(1, Math.floor(limit || 50)));
+    return statsRepo.getTimeline(l);
   },
 };

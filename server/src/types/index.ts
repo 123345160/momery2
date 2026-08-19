@@ -293,8 +293,26 @@ export interface ExportPayload {
   exportedAt: string; // ISO datetime
   decks: ExportDeck[];
   review_logs: ExportReviewLog[];
-  notes: unknown[]; // V1.0 占位，M1 替换为 Note 导出类型
-  templates: unknown[]; // V1.0 占位，M1 替换为 Template 导出类型
+  notes: ExportNote[];
+  templates: ExportTemplate[];
+}
+
+/** 导出中的笔记（M1，folder_name 用于还原层级，is_today 为布尔 0/1） */
+export interface ExportNote {
+  folder_name: string | null;
+  title: string;
+  content: string;
+  is_today: number; // 0/1
+  tags: string; // JSON 字符串（与 DB 一致）
+}
+
+/** 导出中的模板（M1） */
+export interface ExportTemplate {
+  name: string;
+  description: string | null;
+  front: string;
+  back: string;
+  is_default: number; // 0/1
 }
 
 /** 导出中的牌组（ARCH §10.1） */
@@ -355,4 +373,68 @@ export interface StatsOverview {
   dueToday: number;
   streakDays: number;
   accuracy: number; // 0-100
+}
+
+// ===== M1（Stage 7）新增返回类型 =====
+
+/** 文件夹树节点（GET /api/folders/tree 返回） */
+export interface FolderNode {
+  id: number;
+  name: string;
+  parentId: number | null;
+  noteCount: number;
+  children: FolderNode[];
+}
+
+/** 笔记转卡片结果（GET /api/notes/:id/extract、POST /api/notes/:id/convert 返回） */
+export interface ConvertNoteResult {
+  cards: { front: string; back: string }[];
+  cardCount: number;
+}
+
+/** 考试进度（GET /api/exams/:id/progress 返回） */
+export interface ExamProgress {
+  targetCount: number;
+  currentCount: number;
+  targetAccuracy: number;
+  currentAccuracy: number;
+  daysLeft: number;
+}
+
+/** 学习时间轴条目（GET /api/stats/timeline 返回） */
+export interface TimelineItem {
+  id: number;
+  cardId: number | null;
+  cardFront: string | null;
+  deckName: string | null;
+  result: string;
+  reviewedAt: string;
+}
+
+/** 全局搜索类别（GET /api/search?category=，ARCH §6.2） */
+export type SearchCategory = 'all' | 'decks' | 'notes' | 'cards';
+
+/** 全局搜索结果（GET /api/search 返回） */
+export interface SearchResult {
+  keyword: string;
+  decks: {
+    id: number;
+    name: string;
+    description: string;
+    cardCount: number;
+  }[];
+  cards: {
+    id: number;
+    deckId: number | null;
+    deckName: string | null;
+    front: string;
+    back: string;
+  }[];
+  notes: {
+    id: number;
+    folderId: number | null;
+    folderName: string | null;
+    title: string;
+    snippet: string;
+  }[];
 }

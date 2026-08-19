@@ -13,6 +13,9 @@
 
 import { deckRepo } from '../repositories/deckRepo.js';
 import { cardRepo } from '../repositories/cardRepo.js';
+import { noteRepo } from '../repositories/noteRepo.js';
+import { templateRepo } from '../repositories/templateRepo.js';
+import { folderRepo } from '../repositories/folderRepo.js';
 import { importExportRepo } from '../repositories/importExportRepo.js';
 import { runInTransaction } from '../db/connection.js';
 import { toSqliteUTC } from '../utils/sqliteTime.js';
@@ -26,6 +29,8 @@ import type {
   ExportDeck,
   ExportCard,
   ExportReviewLog,
+  ExportNote,
+  ExportTemplate,
   ImportSummary,
   ReviewResult,
 } from '../types/index.js';
@@ -71,6 +76,12 @@ function cardToExportCard(card: Card): ExportCard {
   };
 }
 
+/** 文件夹 id → 名称（导出笔记时附带，便于导入还原层级路径） */
+function folderNameById(id: number): string | null {
+  const f = folderRepo.getById(id) as { name?: string } | null;
+  return f?.name ?? null;
+}
+
 // ===== Service =====
 
 export const importExportService = {
@@ -112,13 +123,29 @@ export const importExportService = {
       };
     });
 
+    const notes: ExportNote[] = noteRepo.getAll().map((n) => ({
+      folder_name: n.folder_id ? folderNameById(n.folder_id) : null,
+      title: n.title,
+      content: n.content,
+      is_today: n.is_today ?? 0,
+      tags: n.tags ?? '[]',
+    }));
+
+    const templates: ExportTemplate[] = templateRepo.getAll().map((t) => ({
+      name: t.name,
+      description: t.description,
+      front: t.front,
+      back: t.back,
+      is_default: t.is_default ? 1 : 0,
+    }));
+
     return {
       version: 1,
       exportedAt: new Date().toISOString(),
       decks: exportDecks,
       review_logs: exportLogs,
-      notes: [],
-      templates: [],
+      notes,
+      templates,
     };
   },
 
@@ -281,6 +308,43 @@ export const importExportService = {
           result: log.result,
           reviewedAt: isoToSqlite(log.reviewed_at) ?? toSqliteUTC(new Date()),
         });
+      }
+
+      // ===== 导入 notes（M1，按 folder_name 还原层级）=====
+      const notesRaw = Array.isArray(payload.notes) ? payload.notes : [];
+      for (let m = 0; m < notesRaw.length; m++) {
+        const n = notesRaw[m];
+        if (!isObject(n) || typeof n.title !== 'string' || !n.title.trim()) continue;
+        if (importExportRepo.getNoteByTitle(n.title)) {
+          continue; // 同名笔记跳过（不计入）
+        }
+        let folderId: number | null = null;
+        if (typeof n.folder_name === 'string' && n.folder_name.trim()) {
+          const f = importExportRepo.getFolderByName(n.folder_name);
+          folderId = f ? f.id : folderRepo.insert({ name: n.folder_name, parentId: null });
+        }
+        importExportRepo.insertNote({
+          folderId,
+          title: n.title,
+          content: typeof n.content === 'string' ? n.content : '',
+          tags: typeof n.tags === 'string' ? n.tags : '[]',
+        });
+        summary.notesInserted++;
+      }
+
+      // ===== 导入 templates（M1，同名则跳过，is_default 由 DB 默认 0）=====
+      const templatesRaw = Array.isArray(payload.templates) ? payload.templates : [];
+      for (let t = 0; t < templatesRaw.length; t++) {
+        const tp = templatesRaw[t];
+        if (!isObject(tp) || typeof tp.name !== 'string' || !tp.name.trim()) continue;
+        if (importExportRepo.getTemplateByName(tp.name)) continue; // 同名模板跳过
+        importExportRepo.insertTemplate({
+          name: tp.name,
+          description: typeof tp.description === 'string' ? tp.description : null,
+          front: typeof tp.front === 'string' ? tp.front : '',
+          back: typeof tp.back === 'string' ? tp.back : '',
+        });
+        summary.templatesInserted++;
       }
     });
 

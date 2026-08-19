@@ -11,7 +11,7 @@
  */
 
 import { getDb } from '../db/connection.js';
-import type { ReviewLog, Deck, Card } from '../types/index.js';
+import type { ReviewLog, Deck, Card, Note, Template, Folder } from '../types/index.js';
 
 export const importExportRepo = {
   // ===== 导出查询 =====
@@ -102,6 +102,66 @@ export const importExportRepo = {
         'INSERT INTO review_logs (card_id, deck_id, result, reviewed_at) VALUES (?, ?, ?, ?)'
       )
       .run(params.cardId, params.deckId, params.result, params.reviewedAt);
+    return Number(result.lastInsertRowid);
+  },
+
+  // ===== Notes / Templates 导入（M1）=====
+
+  /** 按标题查笔记（幂等检测：同标题则跳过） */
+  getNoteByTitle(title: string): Note | null {
+    const row = getDb()
+      .prepare('SELECT * FROM notes WHERE title = ?')
+      .get(title) as Note | undefined;
+    return row ?? null;
+  },
+
+  /** 插入笔记（导入用） */
+  insertNote(params: {
+    folderId: number | null;
+    title: string;
+    content: string;
+    tags: string;
+  }): number {
+    const db = getDb();
+    const result = db
+      .prepare(
+        `INSERT INTO notes (folder_id, title, content, tags)
+         VALUES (?, ?, ?, ?)`
+      )
+      .run(params.folderId, params.title, params.content, params.tags);
+    return Number(result.lastInsertRowid);
+  },
+
+  /** 按名查模板（幂等检测：同名则跳过，预置模板受保护） */
+  getTemplateByName(name: string): Template | null {
+    const row = getDb()
+      .prepare('SELECT * FROM templates WHERE name = ?')
+      .get(name) as Template | undefined;
+    return row ?? null;
+  },
+
+  /** 按名查文件夹（导入笔记还原层级用） */
+  getFolderByName(name: string): Folder | null {
+    const row = getDb()
+      .prepare('SELECT * FROM folders WHERE name = ? AND parent_id IS NULL')
+      .get(name) as Folder | undefined;
+    return row ?? null;
+  },
+
+  /** 插入自定义模板（导入用，is_default=0） */
+  insertTemplate(params: {
+    name: string;
+    description: string | null;
+    front: string;
+    back: string;
+  }): number {
+    const db = getDb();
+    const result = db
+      .prepare(
+        `INSERT INTO templates (name, description, front, back, is_default)
+         VALUES (?, ?, ?, ?, 0)`
+      )
+      .run(params.name, params.description, params.front, params.back);
     return Number(result.lastInsertRowid);
   },
 };

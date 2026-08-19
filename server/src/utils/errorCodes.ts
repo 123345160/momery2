@@ -15,6 +15,8 @@ export const ErrorCodes = {
   INVALID_RESULT: 40003,
   EMPTY_DECK: 40004,
   INVALID_JSON: 40005,
+  INVALID_PARAM: 40006,
+  EMPTY_CONTENT: 40007,
 
   // 资源不存在（HTTP 404）
   DECK_NOT_FOUND: 40401,
@@ -22,11 +24,18 @@ export const ErrorCodes = {
   NOTE_NOT_FOUND: 40403,
   FOLDER_NOT_FOUND: 40404,
   TEMPLATE_NOT_FOUND: 40405,
+  EXAM_NOT_FOUND: 40406,
+  NOT_FOUND: 40409,
 
   // 业务冲突（HTTP 409）
   DECK_DUPLICATE: 40901,
   FOLDER_NOT_EMPTY: 40902,
   DEFAULT_TEMPLATE: 40903,
+  DUPLICATE_RESOURCE: 40904,
+
+  // 权限/限制（HTTP 403 / 413）
+  FORBIDDEN: 40300,
+  FILE_TOO_LARGE: 41300,
 
   // 服务端错误（HTTP 500）
   DB_ERROR: 50001,
@@ -43,14 +52,21 @@ export const ErrorCodeToHttpStatus: Record<number, number> = {
   [ErrorCodes.INVALID_RESULT]: 400,
   [ErrorCodes.EMPTY_DECK]: 400,
   [ErrorCodes.INVALID_JSON]: 400,
+  [ErrorCodes.INVALID_PARAM]: 400,
+  [ErrorCodes.EMPTY_CONTENT]: 400,
   [ErrorCodes.DECK_NOT_FOUND]: 404,
   [ErrorCodes.CARD_NOT_FOUND]: 404,
   [ErrorCodes.NOTE_NOT_FOUND]: 404,
   [ErrorCodes.FOLDER_NOT_FOUND]: 404,
   [ErrorCodes.TEMPLATE_NOT_FOUND]: 404,
+  [ErrorCodes.EXAM_NOT_FOUND]: 404,
+  [ErrorCodes.NOT_FOUND]: 404,
   [ErrorCodes.DECK_DUPLICATE]: 409,
   [ErrorCodes.FOLDER_NOT_EMPTY]: 409,
   [ErrorCodes.DEFAULT_TEMPLATE]: 409,
+  [ErrorCodes.DUPLICATE_RESOURCE]: 409,
+  [ErrorCodes.FORBIDDEN]: 403,
+  [ErrorCodes.FILE_TOO_LARGE]: 413,
   [ErrorCodes.DB_ERROR]: 500,
   [ErrorCodes.FILE_WRITE_ERROR]: 500,
   [ErrorCodes.FILE_READ_ERROR]: 500,

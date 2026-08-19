@@ -1,80 +1,91 @@
 /**
- * folderRepo.ts — folders 表数据访问层（DB §6.3.1）
- * 纯 SQL 操作，不包含业务判断、不调用其他 repository
+ * folderRepo.ts — folders 表数据访问层
+ * 纯 SQL 操作，不包含业务判断
  */
 
 import { getDb } from '../db/connection.js';
 import type { Folder, FolderInsertDTO, FolderUpdateDTO } from '../types/index.js';
 
 export const folderRepo = {
-  /** 获取全部文件夹，按名称排序 */
+  /** 查询全部文件夹（用于内存构建树） */
   getAll(): Folder[] {
     return getDb().prepare('SELECT * FROM folders ORDER BY name').all() as Folder[];
   },
 
-  /** 按 ID 查 */
   getById(id: number): Folder | null {
-    const row = getDb().prepare('SELECT * FROM folders WHERE id = ?').get(id) as Folder | undefined;
+    const row = getDb().prepare('SELECT * FROM folders WHERE id = ?').get(id) as
+      | Folder
+      | undefined;
     return row ?? null;
   },
 
-  /** 获取子文件夹 */
-  getChildren(parentId: number): Folder[] {
+  getByNameAndParent(name: string, parentId: number | null): Folder | null {
+    const row = getDb()
+      .prepare('SELECT * FROM folders WHERE name = ? AND parent_id IS ?')
+      .get(name, parentId) as Folder | undefined;
+    return row ?? null;
+  },
+
+  /** 查询某文件夹下的直接子文件夹 */
+  getChildren(parentId: number | null): Folder[] {
     return getDb()
-      .prepare('SELECT * FROM folders WHERE parent_id = ? ORDER BY name')
+      .prepare('SELECT * FROM folders WHERE parent_id IS ? ORDER BY name')
       .all(parentId) as Folder[];
   },
 
-  /** 插入文件夹 */
+  /** 统计某文件夹下的笔记数量（不含子文件夹） */
+  countNotes(folderId: number): number {
+    const row = getDb()
+      .prepare('SELECT COUNT(*) AS c FROM notes WHERE folder_id = ?')
+      .get(folderId) as { c: number };
+    return row.c;
+  },
+
+  /** 统计某文件夹下的直接子文件夹数量 */
+  countChildren(folderId: number): number {
+    const row = getDb()
+      .prepare('SELECT COUNT(*) AS c FROM folders WHERE parent_id = ?')
+      .get(folderId) as { c: number };
+    return row.c;
+  },
+
   insert(dto: FolderInsertDTO): number {
-    const db = getDb();
-    const result = db
+    const result = getDb()
       .prepare('INSERT INTO folders (name, parent_id) VALUES (?, ?)')
       .run(dto.name, dto.parentId ?? null);
     return Number(result.lastInsertRowid);
   },
 
-  /** 更新文件夹名称 */
   update(id: number, dto: FolderUpdateDTO): number {
-    const db = getDb();
-    const result = db
-      .prepare("UPDATE folders SET name = ?, updated_at = datetime('now') WHERE id = ?")
-      .run(dto.name, id);
+    const sets: string[] = [];
+    const params: (string | number | null)[] = [];
+    if (dto.name !== undefined) {
+      sets.push('name = ?');
+      params.push(dto.name);
+    }
+    if (sets.length === 0) return 0;
+    sets.push("updated_at = datetime('now')");
+    params.push(id);
+    const result = getDb()
+      .prepare(`UPDATE folders SET ${sets.join(', ')} WHERE id = ?`)
+      .run(...params);
+    return result.changes;
+  },
+
+  /** 移动文件夹到新父（专门用于 move 操作） */
+  moveTo(id: number, parentId: number | null): number {
+    const result = getDb()
+      .prepare("UPDATE folders SET parent_id = ?, updated_at = datetime('now') WHERE id = ?")
+      .run(parentId, id);
     return result.changes;
   },
 
   /**
-   * 删除文件夹
-   * 约束（DB §3.1.1）：无子文件夹、无笔记、无关联牌组，任一非空抛错
+   * 删除文件夹（前置校验由 service 负责：非空保护）
+   * 注意外键：notes.folder_id ON DELETE RESTRICT，notes 存在时删除会失败
    */
   remove(id: number): number {
-    const db = getDb();
-
-    // 校验：无子文件夹
-    const childCount = db
-      .prepare('SELECT COUNT(*) as cnt FROM folders WHERE parent_id = ?')
-      .get(id) as { cnt: number };
-    if (childCount.cnt > 0) {
-      throw new Error('FOLDER_NOT_EMPTY: 存在子文件夹');
-    }
-
-    // 校验：无笔记
-    const noteCount = db
-      .prepare('SELECT COUNT(*) as cnt FROM notes WHERE folder_id = ?')
-      .get(id) as { cnt: number };
-    if (noteCount.cnt > 0) {
-      throw new Error('FOLDER_NOT_EMPTY: 文件夹下存在笔记');
-    }
-
-    // 校验：无关联牌组
-    const deckCount = db
-      .prepare('SELECT COUNT(*) as cnt FROM decks WHERE folder_id = ?')
-      .get(id) as { cnt: number };
-    if (deckCount.cnt > 0) {
-      throw new Error('FOLDER_NOT_EMPTY: 文件夹下存在牌组');
-    }
-
-    const result = db.prepare('DELETE FROM folders WHERE id = ?').run(id);
+    const result = getDb().prepare('DELETE FROM folders WHERE id = ?').run(id);
     return result.changes;
   },
 };
