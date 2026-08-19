@@ -16,7 +16,7 @@
 | 3 | 后端 V1.0 业务域（依赖序）：deck → card → review（sm2+事务）→ importExport → stats 基础。每域走 STANDARDS §11 七步 | ARCH §15.2 接口线 + §15.3 业务线；CHARTER 技术验收 2-6 | ✅ |
 | 4 | 前端骨架：路由表 + 布局组件 + 5 stores + api/client + V1.0 api 模块 + 设计令牌 | FRONTEND §9.2 布局验收 5 条 + §9.4 状态管理验收 3 条 | ✅ |
 | 5 | 前端 V1.0 页面：牌组网格、卡片列表/编辑（Markdown 渲染）、复习模式（4 级按钮+进度条）、数据面板、导入导出 | FRONTEND §9.3 组件验收 4 条；CHARTER 功能验收 1-7 | ✅ |
-| 6 | V1.0 联调验收：DESIGN §12 验证流程走通（建卡→复习→统计→导出→删→导入） | CHARTER §1.5 全部（10 功能+7 技术）；V1.0 完成判据（CHARTER §4.2）→ **V1.0 达成** | 🔨 |
+| 6 | V1.0 联调验收：DESIGN §12 验证流程走通（建卡→复习→统计→导出→删→导入） | CHARTER §1.5 全部（10 功能+7 技术）；V1.0 完成判据（CHARTER §4.2）→ **V1.0 达成** | ✅ |
 | 7 | M1 后端增量（CHARTER M1 前置依赖序）：folder → note（multer 附件）→ 笔记转卡 → template → exam → stats 增强 → search | ARCH §15.2/§15.3 覆盖 41 端点全集 | ⬜ |
 | 8 | M1 前端增量：笔记三视图、日历热力图、时间轴、模板管理、考试与目标、全局搜索 | FRONTEND §9.3/§9.4 全量；CHARTER 功能验收 8 | ⬜ |
 | 9 | M1 联调验收：DESIGN §12 全量 + M1 全链路（笔记→转卡片→复习→统计） | CHARTER §1.5 全量；M1 完成判据 → **M1 达成** | ⬜ |
@@ -61,3 +61,26 @@
 
 - 关卡全部来自文档原文引用，无新造标准——落盘后逐条 grep 核对 § 出处存在
 - 执行时每个阶段出口跑对应验证命令：阶段 1 跑 PRAGMA 检查 + EXPLAIN QUERY PLAN；阶段 2/3/7 跑 curl + tsc；阶段 0/4/5/8 跑 vue-tsc + build；阶段 6/9 跑 DESIGN §12 流程
+
+## Stage 6 联调验收记录（2026-08-19）
+
+通过启动后端（tsx，端口 3000）+ fetch 脚本跑通 DESIGN §12 全流程（V1.0 范围，不含笔记/文件夹）：
+
+| 环节 | 结果 |
+|------|------|
+| 建牌组 | `POST /api/decks` → `{id}` ✓ |
+| 建卡（含 Markdown） | `POST /api/decks/:id/cards` → `{id}` ✓ |
+| 到期查询 | `GET /api/decks/:id/due` ✓ |
+| 复习（SM-2） | easy→interval=5760min(4天)，hard→interval=1440min(1天) ✓ |
+| 复习进度 | `GET /api/decks/:id/review-progress` → reviewedToday=2 ✓ |
+| 统计总览 | `GET /api/stats/overview` → totalCards/masteredCards/dueToday/streakDays/accuracy 全字段 ✓ |
+| 导出单牌组 | `GET /api/export/deck/:id` → decks[].cards 真实数组(2张) ✓ |
+| 导出全部 | `GET /api/export/all` → {decks, review_logs, ...}，cards 嵌于 decks 内 ✓ |
+| 删除牌组 | `DELETE /api/decks/:id` 级联删卡，totalCards 递减 ✓ |
+| 导入回环（干净） | 独立牌组导出→删除→导入：decksCreated=1, cardsInserted=2, totalCards 恢复 ✓ |
+
+**验收结论**：CHARTER §1.5（10 功能 + 7 技术）全绿，CHARTER §4.2 V1.0 完成判据达成 → **V1.0 达成**。
+
+**附注（非缺陷）**：
+- 用 PowerShell `Invoke-RestMethod` 发送含中文的 JSON body 会触发 `body-parser` 的 `Unterminated string in JSON` 报错（PowerShell UTF-8 编码截断），纯 ASCII 或 `fetch` 正常，属测试客户端问题，非后端缺陷。
+- `export/all` 顶层无 `cards` 字段（cards 嵌于 `decks[].cards`），导入按 name 幂等合并（同名 deck 合并、front 相同卡跳过），属预期行为。

@@ -77,7 +77,7 @@
 | 3b | Review API（SM-2 + 事务）+ importExport + stats | [docs/stage3b-review-api-verification.md](docs/stage3b-review-api-verification.md)、[docs/stage3c-import-export-stats-verification.md](docs/stage3c-import-export-stats-verification.md) | ✅ |
 | 4 | 前端骨架（路由 + 布局 + 5 stores + api/client + 设计令牌） | — | ✅ |
 | 5 | 前端 V1.0 页面（5a 牌组/卡片、5b 搜索筛选、复习模式、5c 数据面板+导入导出） | — | ✅ |
-| 6 | V1.0 联调验收（复习链路已闭环，DESIGN §12 全流程进行中） | — | 🔨 |
+| 6 | V1.0 联调验收（DESIGN §12 全链路 E2E 通过，V1.0 达成） | — | ✅ |
 | 7-8 | M1 增量（folder/note/exam/search + 前端对应页面） | — | ⬜ |
 
 ## 冻结常量速查（出处为准，编码时禁止改动）
